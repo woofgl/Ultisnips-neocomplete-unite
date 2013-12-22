@@ -42,13 +42,14 @@ endfunction"}}}
 
 function! s:source.gather_candidates(context) "{{{
   "return values(neosnippet#get_snippets())
-  return keys(UltiSnips_SnippetsInCurrentScope())
+  " return keys(UltiSnips_SnippetsInCurrentScope())
+  return s:get_words_list(a:context.complete_str,a:context.complete_pos)
 endfunction"}}}
 
 function! s:source.hooks.on_post_filter(context) "{{{
   for snippet in a:context.candidates
     let snippet.dup = 1
-    let snippet.menu = '     [US]'
+    let snippet.menu = '[snippets]'
     "let snippet.menu = neosnippet#util#strwidthpart(
           "\ snippet.menu_template, winwidth(0)/3)
     "if g:neosnippet#enable_preview
@@ -57,6 +58,30 @@ function! s:source.hooks.on_post_filter(context) "{{{
   endfor
   return a:context.candidates
 endfunction"}}}
+ " Get Completion list based on UltiSnips function used in <C-Tab> completion
+" list
+function! s:get_words_list(cur_word, possible)
+python << EOF
+import vim
+import sys
+from UltiSnips import UltiSnips_Manager
+import UltiSnips._vim as _vim
+cur_word = vim.eval("a:cur_word")
+possible = True if vim.eval("a:possible") else False
+rawsnips = UltiSnips_Manager._snips(cur_word, possible)
+
+snips = []
+for snip in rawsnips:
+    display = {}
+    display['real_name'] = snip.trigger
+    display['menu'] = '<snip> ' + snip.description
+    display['word'] = snip.trigger
+    display['kind'] = '~'
+    snips.append(display)
+
+vim.command("return %s" % _vim.escape(snips))
+EOF
+endfunction
 
 function! neocomplete#sources#ultisnips#define() "{{{
   return s:source
